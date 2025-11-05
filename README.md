@@ -15,7 +15,11 @@ QueueCTL is a **production-grade, CLI-based background job queue system** built 
 - Comprehensive monitoring via CLI  
 
 ----
-https://github.com/vais05/QueueCTL/blob/main/assets/video.mp4
+
+
+[▶️ Watch Demo Video on YouTube](https://youtu.be/GOI7TQkTalw)
+
+
 ----
 ## 🧱 System Architecture
 
