@@ -1,0 +1,21 @@
+{
+    "name": "exported-assets",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "test": "node test/integration.test.js",
+        "dev": "node src/index.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "better-sqlite3": "^12.4.1",
+        "chalk": "^5.6.2",
+        "commander": "^14.0.2",
+        "table": "^6.9.0",
+        "uuid": "^13.0.0"
+    }
+}
