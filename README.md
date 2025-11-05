@@ -492,11 +492,6 @@ QueueCTL provides a **complete, production-ready job queue system** that ensures
 - **Maintainability:** Modular and well-documented codebase  
 - **Observability:** Rich CLI for job management and monitoring  
 
-**Version:** 1.0.0  
-**Status:** ✅ Production Ready  
-**Last Updated:** November 2025  
-
-Ready for deployment and immediate use.
 
 ---
 
