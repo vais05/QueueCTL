@@ -238,6 +238,8 @@ node src/index.js dlq restore <job_id>
 
 ### Example: Enqueueing and Processing Jobs
 
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/b756dc0a-9297-4277-a1a0-4b749b7b1606" />
+
 ```
 node src/index.js enqueue "{\"id\":\"faculty_job1\",\"command\":\"echo Starting Work\"}"
 ✓ Job enqueued successfully
