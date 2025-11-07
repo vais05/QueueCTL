@@ -258,6 +258,7 @@ node src/index.js worker start --count 1
 ...  
 Moved to DLQ
 ```
+![QueueCTL Output](https://github.com/user-attachments/assets/b756dc0a-9297-4277-a1a0-4b749b7b1606)
 
 ### Listing DLQ
 
