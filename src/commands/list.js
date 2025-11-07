@@ -36,11 +36,11 @@ export async function listCommand(options) {
 
 function getStateColor(state) {
   switch (state) {
-    case 'completed': return chalk.green('✓ ' + state);
-    case 'pending': return chalk.blue('⧗ ' + state);
-    case 'processing': return chalk.yellow('⟳ ' + state);
-    case 'failed': return chalk.red('✗ ' + state);
-    case 'dead': return chalk.magenta('☠ ' + state);
+    case 'completed': return chalk.green('done ' + state);
+    case 'pending': return chalk.blue('work in pending ' + state);
+    case 'processing': return chalk.yellow('processing ' + state);
+    case 'failed': return chalk.red('failed ' + state);
+    case 'dead': return chalk.magenta('dead ' + state);
     default: return state;
   }
 }
