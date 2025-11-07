@@ -220,30 +220,28 @@ CREATE TABLE config (
 ```
 queuectl/
 ├── src/
-│   ├── index.js                 # CLI entry point
-│   ├── commands/                # CLI commands
-│   │   ├── enqueue.js
-│   │   ├── worker.js
-│   │   ├── status.js
-│   │   ├── list.js
-│   │   ├── dlq.js
-│   │   └── config.js
-│   └── core/                    # Core logic
-│       ├── db.js
-│       ├── queue.js
-│       ├── worker-process.js
-│       ├── worker-runner.js
-│       ├── lock.js
-│       └── config.js
-├── test/
-│   └── integration.test.js
+│   ├── index.js                 # CLI entry
+│   ├── commands/                # CLI command modules
+│   ├── core/                    # Business logic & persistence
+│   ├── api/                     # Express API server for frontend
+│   │   ├── index.js             # API server entry point
+│   │   ├── jobs.js              # Jobs API routes
+│   │   └── dlq.js               # DLQ API routes
+├── frontend/
+│   ├── public/
+│   │   └── index.html           # React app HTML
+│   ├── src/
+│   │   ├── App.js               # React dashboard main component
+│   │   ├── index.js             # React DOM render entry
+│   ├── package.json             # React app dependencies
 ├── data/
-│   ├── queuectl.db
+│   ├── queuectl.db              # SQLite DB file
 │   ├── locks/
 │   └── pids/
-├── package.json
+├── test/
+│   └── integration.test.js
+├── package.json                 # Root backend dependencies (CLI + API)
 ├── README.md
-├── DESIGN.md
 └── .gitignore
 ```
 
@@ -448,3 +446,4 @@ Perfect for **background job processing with retry logic and failure handling**.
 5. [Dead Letter Queue System Design](https://www.geeksforgeeks.org/system-design/dead-letter-queue-system-design/)
 6. [Building CLI Tools with Node.js](https://javascript.plainenglish.io/creating-a-cli-tool-with-node-js-26a1e3b595fd)
 7. [Modern Queue Patterns Guide](https://dzone.com/articles/modern-queue-patterns-guide)
+
