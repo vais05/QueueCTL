@@ -248,6 +248,7 @@ node src/index.js worker start --count 1
 ```
 
 ### Example: Failed Job with Retry and DLQ
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/b756dc0a-9297-4277-a1a0-4b749b7b1606" />
 
 ```
 node src/index.js enqueue "{\"id\":\"faculty_fail1\",\"command\":\"idontexist123\"}"
@@ -258,7 +259,6 @@ node src/index.js worker start --count 1
 ...  
 Moved to DLQ
 ```
-![QueueCTL Output](https://github.com/user-attachments/assets/b756dc0a-9297-4277-a1a0-4b749b7b1606)
 
 ### Listing DLQ
 
