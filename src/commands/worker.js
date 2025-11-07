@@ -112,9 +112,9 @@ export function workerCommand(action, options) {
 
       cleanupAllLocks();
 
-      console.log(chalk.green(`✓ Stopped ${stoppedCount} worker(s)`));
+      console.log(chalk.green(` Stopped ${stoppedCount} worker(s)`));
     } catch (error) {
-      console.log(chalk.yellow('✓ No workers running'));
+      console.log(chalk.yellow(' No workers running'));
     }
   }
 }
