@@ -238,7 +238,7 @@ node src/index.js dlq restore <job_id>
 
 ### Example: Enqueueing and Processing Jobs
 
-<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/b756dc0a-9297-4277-a1a0-4b749b7b1606" />
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/f6dd71ff-9144-4670-81a4-1b140c5786b6" />
 
 ```
 node src/index.js enqueue "{\"id\":\"faculty_job1\",\"command\":\"echo Starting Work\"}"
@@ -261,6 +261,7 @@ node src/index.js worker start --count 1
 ...  
 Moved to DLQ
 ```
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/ea4720aa-ee20-4e7f-9660-cde242b0441a" />
 
 ### Listing DLQ
 
@@ -268,7 +269,7 @@ Moved to DLQ
 node src/index.js dlq list
 ☠ Dead Letter Queue: 5 jobs
 ```
-
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/f1104572-365d-43f5-a99c-ff0b1c2560cb" />
 ---
 
 ## ⚙️ Configuration Management
