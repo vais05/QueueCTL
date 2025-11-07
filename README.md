@@ -331,8 +331,7 @@ It reflects real backend engineering practices applicable to distributed systems
  3. https://www.reddit.com/r/flask/comments/lvccgo/using_a_database_such_as_sqlite3_versus_json_to/
  4. https://dzone.com/articles/distributed-locking-and-race-condition-prevention
  5. https://dkharazi.github.io/notes/py/gunicorn/signal/
- 6. https://stackoverflow.com/questions/22789079/json-vs-sqlite-which-is-more-suitable-for-android-ios-developmen
- t
+ 6. https://stackoverflow.com/questions/22789079/json-vs-sqlite-which-is-more-suitable-for-android-ios-development
  7. https://www.geeksforgeeks.org/computer-networks/handling-race-condition-in-distributed-system/
  8. https://www.linkedin.com/pulse/mastering-linux-kill-signals-graceful-shutdown-worker-joey-wang-pytce
  9. https://stackoverflow.com/questions/62182811/python-query-performance-on-json-vs-sqlite
