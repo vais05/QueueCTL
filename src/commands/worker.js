@@ -18,7 +18,6 @@ function getPidFilePath(workerId) {
 async function runWorker(workerId) {
   console.log(chalk.blue(`[Worker ${workerId}] Started`));
 
-  // Handle graceful shutdown
   const handleShutdown = () => {
     console.log(chalk.yellow(`[Worker ${workerId}] Shutting down gracefully...`));
     fs.unlinkSync(getPidFilePath(workerId));
@@ -28,7 +27,6 @@ async function runWorker(workerId) {
   process.on('SIGTERM', handleShutdown);
   process.on('SIGINT', handleShutdown);
 
-  // Main processing loop
   let consecutiveEmpty = 0;
   while (true) {
     try {
@@ -37,7 +35,6 @@ async function runWorker(workerId) {
       if (result === null) {
         consecutiveEmpty++;
         if (consecutiveEmpty > 5) {
-          // No jobs for a while, wait longer
           await sleep(1000);
           consecutiveEmpty = 0;
         } else {
@@ -74,7 +71,6 @@ export function workerCommand(action, options) {
       const workerId = i + 1;
       const pidFile = getPidFilePath(workerId);
 
-      // Start worker in separate process
       const workerProcess = spawn('node', [
         fileURLToPath(new URL('../core/worker-runner.js', import.meta.url)),
         String(workerId),
@@ -82,13 +78,11 @@ export function workerCommand(action, options) {
         stdio: 'inherit',
       });
 
-      // Save PID
       fs.writeFileSync(pidFile, String(workerProcess.pid));
       workers.push(workerProcess.pid);
 
       console.log(chalk.blue(`  Worker ${workerId} started (PID: ${workerProcess.pid})`));
 
-      // Unref to allow parent to exit
     }
 
     console.log(chalk.green('✓ Workers started'));
@@ -110,14 +104,12 @@ export function workerCommand(action, options) {
           stoppedCount++;
           console.log(chalk.yellow(`  Stopped worker (PID: ${pid})`));
         } catch (error) {
-          // Process already dead, just clean up file
           try {
             fs.unlinkSync(pidFile);
           } catch {}
         }
       });
 
-      // Cleanup locks
       cleanupAllLocks();
 
       console.log(chalk.green(`✓ Stopped ${stoppedCount} worker(s)`));

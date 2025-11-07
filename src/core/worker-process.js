@@ -1,70 +1,51 @@
 import { spawn } from 'child_process';
+import { processNextJob as claimNextJob } from './db.js';  // Import from db.js
 import {
-  getNextJob,
-  startProcessing,
   completeJob,
   failJob,
   getBackoffDelay,
 } from './queue.js';
-import { getDatabase, getJob, updateJobState } from './db.js';
-import { acquireLock, releaseLock, isLocked } from './lock.js';
 import chalk from 'chalk';
-
-const db = getDatabase();
-
 export async function processNextJob(workerId) {
-  let job = getNextJob();
+  console.log(`[Worker ${workerId}] Polling for job...`);
+  
+  let job = await claimNextJob();
+  
   if (!job) {
+    console.log(`[Worker ${workerId}] No pending job found`);
     return null;
   }
 
-  // Try to acquire lock
-  if (!acquireLock(job.id)) {
-    // Another worker took this job
-    return null;
-  }
+  console.log(chalk.blue(`[Worker ${workerId}] Starting job: ${job.id} - ${job.command}`));
 
   try {
-    // Verify job is still pending (double-check)
-    const freshJob = getJob(job.id);
-    if (freshJob.state !== 'pending') {
-      releaseLock(job.id);
-      return null;
-    }
-
-    startProcessing(job.id);
-    console.log(chalk.blue(`[Worker ${workerId}] Starting job: ${job.id}`));
-
-    // Calculate backoff if this is a retry
-    if (freshJob.attempts > 0) {
-      const backoffDelay = getBackoffDelay(freshJob.attempts);
-      console.log(chalk.gray(`[Worker ${workerId}] Backoff delay: ${backoffDelay}s for retry attempt ${freshJob.attempts + 1}`));
+    if (job.attempts > 1) {
+      const backoffDelay = await getBackoffDelay(job.attempts - 1);
+      console.log(chalk.gray(`[Worker ${workerId}] Backoff delay: ${backoffDelay}s for retry attempt ${job.attempts}`));
       await sleep(backoffDelay * 1000);
     }
 
     const result = await executeCommand(job.command);
 
     if (result.success) {
-      completeJob(job.id, result.output);
-      console.log(chalk.green(`[Worker ${workerId}] ✓ Job completed: ${job.id}`));
+      await completeJob(job.id, result.output);
+      console.log(chalk.green(`[Worker ${workerId}]  Job completed: ${job.id}`));
     } else {
-      failJob(job.id, result.error);
-      console.log(chalk.yellow(`[Worker ${workerId}] ✗ Job failed: ${job.id}`));
+      await failJob(job.id, result.error);
+      console.log(chalk.yellow(`[Worker ${workerId}]  Job failed: ${job.id}`));
     }
 
     return result;
   } catch (error) {
-    failJob(job.id, error.message);
+    await failJob(job.id, error.message);
     console.error(chalk.red(`[Worker ${workerId}] Error processing job: ${error.message}`));
     return null;
-  } finally {
-    releaseLock(job.id);
   }
 }
 
 export function executeCommand(command) {
   return new Promise((resolve) => {
-    const timeout = parseInt(process.env.WORKER_TIMEOUT) || 300000; // 5 minutes default
+    const timeout = parseInt(process.env.WORKER_TIMEOUT) || 300000;
 
     const child = spawn('bash', ['-c', command], {
       stdio: ['pipe', 'pipe', 'pipe'],

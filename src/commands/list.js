@@ -2,9 +2,11 @@ import chalk from 'chalk';
 import { getAllJobs, getJobsByState } from '../core/db.js';
 import { table } from 'table';
 
-export function listCommand(options) {
+export async function listCommand(options) {
   const state = options.state;
-  const jobs = state ? getJobsByState(state) : getAllJobs();
+  const result = state ? await getJobsByState(state) : await getAllJobs();
+
+  const jobs = Array.isArray(result) ? result : (result?.jobs ?? []);
 
   if (jobs.length === 0) {
     console.log(chalk.yellow('No jobs found'));
@@ -28,7 +30,7 @@ export function listCommand(options) {
     ]),
   ];
 
-  console.log(chalk.bold.cyan(`\\n📋 Jobs (${state ? state : 'all'}): ${jobs.length}\\n`));
+  console.log(chalk.bold.cyan(`\n Jobs (${state ? state : 'all'}): ${jobs.length}\n`));
   console.log(table(data));
 }
 

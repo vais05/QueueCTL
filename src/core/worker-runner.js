@@ -13,28 +13,26 @@ async function runWorker() {
   process.on('SIGTERM', handleShutdown);
   process.on('SIGINT', handleShutdown);
 
-  let consecutiveEmpty = 0;
   while (true) {
     try {
+      console.log(`[Worker ${workerId}] Polling for job...`);
       const result = await processNextJob(workerId);
+      console.log(`[Worker ${workerId}] processNextJob returned:`, result);
 
       if (result === null) {
-        consecutiveEmpty++;
-        if (consecutiveEmpty > 5) {
-          await sleep(1000);
-          consecutiveEmpty = 0;
-        } else {
-          await sleep(100);
-        }
-      } else {
-        consecutiveEmpty = 0;
+        console.log(`[Worker ${workerId}] No pending jobs left. All jobs completed.`);
+        break;  
       }
     } catch (error) {
       console.error(`[Worker ${workerId}] Error:`, error.message);
       await sleep(1000);
     }
   }
+
+  console.log(`[Worker ${workerId}] Exiting.`);
+  process.exit(0);
 }
+
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

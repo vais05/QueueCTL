@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { getQueueStats } from '../core/db.js';
+import { getJobCountsByState  } from '../core/db.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -18,12 +18,10 @@ export function statusCommand() {
       const pid = parseInt(fs.readFileSync(pidFile, 'utf-8'));
       
       try {
-        // Check if process still exists
         process.kill(pid, 0);
         activeWorkers++;
         workerPids.push(pid);
       } catch (error) {
-        // Process dead, clean up file
         try {
           fs.unlinkSync(pidFile);
         } catch {}
@@ -31,14 +29,14 @@ export function statusCommand() {
     });
   }
 
-  console.log(chalk.bold.cyan('\\n📊 Queue Status\\n'));
+  console.log(chalk.bold.cyan('\\n Queue Status\\n'));
 
   console.log(chalk.gray('Job States:'));
-  console.log(chalk.green(`  ✓ Completed: ${stats.completed}`));
-  console.log(chalk.blue(`  ⧗ Pending: ${stats.pending}`));
-  console.log(chalk.yellow(`  ⟳ Processing: ${stats.processing}`));
-  console.log(chalk.red(`  ✗ Failed: ${stats.failed}`));
-  console.log(chalk.magenta(`  ☠ Dead (DLQ): ${stats.dlq}`));
+  console.log(chalk.green(`   Completed: ${stats.completed}`));
+  console.log(chalk.blue(`   Pending: ${stats.pending}`));
+  console.log(chalk.yellow(`   Processing: ${stats.processing}`));
+  console.log(chalk.red(`   Failed: ${stats.failed}`));
+  console.log(chalk.magenta(`   Dead (DLQ): ${stats.dlq}`));
 
   console.log(chalk.gray('\\nWorkers:'));
   console.log(chalk.green(`  Active: ${activeWorkers}`));

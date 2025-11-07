@@ -1,20 +1,31 @@
-import Database from 'better-sqlite3';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import path from 'path';
 import fs from 'fs';
 
 const dataDir = path.join(process.cwd(), 'data');
 const dbPath = path.join(dataDir, 'queuectl.db');
+console.log('Using database file:', dbPath);
 
-// Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+let db;
 
-export function initializeDatabase() {
-  db.exec(`
+async function initDb() {
+  if (!db) {
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+    await db.exec(`PRAGMA journal_mode = WAL;`);
+  }
+  return db;
+}
+export async function initializeDatabase() {
+  const db = await getDatabase(); 
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS jobs (
       id TEXT PRIMARY KEY,
       command TEXT NOT NULL,
@@ -46,19 +57,71 @@ export function initializeDatabase() {
     INSERT OR IGNORE INTO config (key, value) VALUES ('backoff_max', '300');
     INSERT OR IGNORE INTO config (key, value) VALUES ('worker_timeout', '300');
   `);
+
+  await initializeActiveWorkersTable();
 }
 
-export function getDatabase() {
-  return db;
+export async function getDatabase() {
+  return await initDb();
+}
+export async function processNextJob() {
+  const db = await getDatabase();
+  
+  try {
+    await db.run('BEGIN IMMEDIATE');
+    const job = await db.get(
+      "SELECT * FROM jobs WHERE state = 'pending' ORDER BY created_at ASC LIMIT 1"
+    );
+    
+    if (!job) {
+      await db.run('COMMIT');
+      return null;
+    }
+    
+    const currentAttempts = job.attempts ?? 0;
+    const newAttempts = currentAttempts + 1;
+    
+    await db.run(
+      `UPDATE jobs 
+       SET state = ?, 
+           attempts = ?,
+           started_at = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      'processing',
+      newAttempts,
+      new Date().toISOString(),
+      new Date().toISOString(),
+      job.id
+    );
+    
+    await db.run('COMMIT');
+    
+    return {
+      ...job,
+      state: 'processing',
+      attempts: newAttempts,
+      started_at: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    try {
+      await db.run('ROLLBACK');
+    } catch (rollbackError) {
+    }
+    console.error('Error in processNextJob:', error);
+    throw error;
+  }
 }
 
-// Job queries
-export function insertJob(job) {
-  const stmt = db.prepare(`
+export async function insertJob(job) {
+  const db = await getDatabase();
+
+  return db.run(
+    `
     INSERT INTO jobs (id, command, state, attempts, max_retries, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  return stmt.run(
+    `,
     job.id,
     job.command,
     job.state || 'pending',
@@ -69,49 +132,62 @@ export function insertJob(job) {
   );
 }
 
-export function getJob(id) {
-  const stmt = db.prepare('SELECT * FROM jobs WHERE id = ?');
-  return stmt.get(id);
+
+export async function getJob(id) {
+  const db = await initDb();
+  return db.get('SELECT * FROM jobs WHERE id = ?', id);
 }
 
-export function getAllJobs() {
-  const stmt = db.prepare('SELECT * FROM jobs ORDER BY created_at DESC');
-  return stmt.all();
+export async function getAllJobs() {
+  const db = await initDb();
+  return db.all('SELECT * FROM jobs ORDER BY created_at DESC');
 }
 
-export function getJobsByState(state) {
-  const stmt = db.prepare('SELECT * FROM jobs WHERE state = ? ORDER BY created_at DESC');
-  return stmt.all(state);
+export async function getJobsByState(state) {
+  const db = await initDb();
+  return db.all('SELECT * FROM jobs WHERE state = ? ORDER BY created_at DESC', state);
 }
 
-export function getJobsToProcess(limit = 10) {
-  const stmt = db.prepare(`
-    SELECT * FROM jobs 
-    WHERE state = 'pending' 
-    ORDER BY created_at ASC 
-    LIMIT ?
-  `);
-  return stmt.all(limit);
+export async function getJobsToProcess(limit = 10) {
+  const db = await initDb();
+  return db.all(
+    `SELECT * FROM jobs 
+     WHERE state = 'pending' 
+     ORDER BY created_at ASC 
+     LIMIT ?`,
+    limit
+  );
 }
 
-export function updateJobState(id, state) {
-  const stmt = db.prepare(`
+
+export async function updateJobState(id, state) {
+  const db = await getDatabase();
+  return db.run(
+    `
     UPDATE jobs 
     SET state = ?, updated_at = ?
     WHERE id = ?
-  `);
-  return stmt.run(state, new Date().toISOString(), id);
+    `,
+    state,
+    new Date().toISOString(),
+    id
+  );
 }
-
-export function updateJobWithResult(id, result) {
-  const stmt = db.prepare(`
-    UPDATE jobs 
-    SET state = ?, attempts = ?, updated_at = ?, error_message = ?, output = ?, completed_at = ?
-    WHERE id = ?
-  `);
-  return stmt.run(
+export async function updateJobWithResult(id, result) {
+  const db = await getDatabase();
+  const currentJob = await getJob(id);
+  
+  await db.run(
+    `UPDATE jobs 
+     SET state = ?, 
+         attempts = ?,
+         updated_at = ?, 
+         error_message = ?, 
+         output = ?, 
+         completed_at = ?
+     WHERE id = ?`,
     result.state,
-    result.attempts,
+    result.attempts !== undefined ? result.attempts : currentJob.attempts, 
     new Date().toISOString(),
     result.error_message || null,
     result.output || null,
@@ -120,58 +196,76 @@ export function updateJobWithResult(id, result) {
   );
 }
 
-export function updateJobAttempt(id, attempts, errorMessage) {
-  const stmt = db.prepare(`
-    UPDATE jobs 
-    SET attempts = ?, state = ?, updated_at = ?, error_message = ?
-    WHERE id = ?
-  `);
-  return stmt.run(attempts, 'failed', new Date().toISOString(), errorMessage, id);
+
+export async function updateJobAttempt(id, attempts, errorMessage, state = 'failed') {
+  const db = await getDatabase();
+  return db.run(
+    `UPDATE jobs 
+     SET attempts = ?, 
+         state = ?, 
+         updated_at = ?, 
+         error_message = ?
+     WHERE id = ?`,
+    attempts,
+    state,
+    new Date().toISOString(),
+    errorMessage,
+    id
+  );
 }
 
-export function moveJobToDLQ(id, reason) {
-  const job = getJob(id);
+
+export async function moveJobToDLQ(id, reason) {
+  const db = await getDatabase();
+
+  const job = await getJob(id); 
   if (!job) return null;
 
-  const stmt = db.prepare(`
+  await db.run(
+    `
     INSERT INTO dlq (id, job_data, moved_at, reason)
     VALUES (?, ?, ?, ?)
-  `);
+    `,
+    id,
+    JSON.stringify(job),
+    new Date().toISOString(),
+    reason
+  );
 
-  const deleteStmt = db.prepare('DELETE FROM jobs WHERE id = ?');
-
-  stmt.run(id, JSON.stringify(job), new Date().toISOString(), reason);
-  deleteStmt.run(id);
+  await db.run('DELETE FROM jobs WHERE id = ?', id);
 
   return job;
 }
 
-export function getDLQJobs() {
-  const stmt = db.prepare('SELECT * FROM dlq ORDER BY moved_at DESC');
-  return stmt.all();
+
+export async function getDLQJobs() {
+  const db = await initDb();
+  return db.all('SELECT * FROM dlq ORDER BY moved_at DESC');
 }
 
-export function getDLQJob(id) {
-  const stmt = db.prepare('SELECT * FROM dlq WHERE id = ?');
-  return stmt.get(id);
+
+export async function getDLQJob(id) {
+  const db = await initDb();
+  return db.get('SELECT * FROM dlq WHERE id = ?', id);
 }
 
-export function removeDLQJob(id) {
-  const stmt = db.prepare('DELETE FROM dlq WHERE id = ?');
-  return stmt.run(id);
+
+export async function removeDLQJob(id) {
+  const db = await getDatabase();
+  return db.run('DELETE FROM dlq WHERE id = ?', id);
 }
 
-export function restoreDLQJobToQueue(id) {
-  const dlqJob = getDLQJob(id);
+
+export async function restoreDLQJobToQueue(id) {
+  const db = await getDatabase();
+  const dlqJob = await getDLQJob(id);
   if (!dlqJob) return null;
 
   const jobData = JSON.parse(dlqJob.job_data);
 
-  // Remove from DLQ
-  removeDLQJob(id);
+  await removeDLQJob(id);
 
-  // Re-insert to pending queue
-  insertJob({
+  await insertJob({
     id: jobData.id,
     command: jobData.command,
     state: 'pending',
@@ -184,39 +278,108 @@ export function restoreDLQJobToQueue(id) {
   return jobData;
 }
 
-// Config queries
-export function setConfig(key, value) {
-  const stmt = db.prepare(`
+export async function setConfig(key, value) {
+  const db = await getDatabase();
+  return db.run(
+    `
     INSERT OR REPLACE INTO config (key, value)
     VALUES (?, ?)
-  `);
-  return stmt.run(key, String(value));
+    `,
+    key,
+    String(value)
+  );
 }
 
-export function getConfig(key) {
-  const stmt = db.prepare('SELECT value FROM config WHERE key = ?');
-  const result = stmt.get(key);
+export async function getConfig(key) {
+  const db = await getDatabase();
+  const result = await db.get('SELECT value FROM config WHERE key = ?', key);
   return result ? result.value : null;
 }
 
-export function getAllConfig() {
-  const stmt = db.prepare('SELECT key, value FROM config');
-  return stmt.all();
+export async function getAllConfig() {
+  const db = await initDb();
+  return db.all('SELECT key, value FROM config');
 }
 
-// Stats queries
-export function getQueueStats() {
+
+
+export async function initializeActiveWorkersTable() {
+  const db = await getDatabase();
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS active_workers (
+      worker_id TEXT PRIMARY KEY,
+      last_heartbeat TEXT NOT NULL
+    )
+  `);
+}
+
+export async function updateWorkerHeartbeat(workerId) {
+  const db = await getDatabase();
+  return db.run(
+    `
+    INSERT INTO active_workers (worker_id, last_heartbeat)
+    VALUES (?, ?)
+    ON CONFLICT(worker_id)
+    DO UPDATE SET last_heartbeat = excluded.last_heartbeat
+    `,
+    workerId,
+    new Date().toISOString()
+  );
+}
+
+
+export async function removeWorker(workerId) {
+  const db = await getDatabase();
+  return db.run('DELETE FROM active_workers WHERE worker_id = ?', workerId);
+}
+
+
+export async function getActiveWorkersCount() {
+  const db = await initDb();
+  const result = await db.get(`
+    SELECT COUNT(*) as count FROM active_workers 
+    WHERE last_heartbeat >= datetime('now', '-1 minute')
+  `);
+  return result ? result.count : 0;
+}
+
+
+export async function getNextJob() {
+  const db = await getDatabase();
+  const job = await db.get(
+    "SELECT * FROM jobs WHERE state = 'pending' ORDER BY created_at ASC LIMIT 1"
+  );
+  return job || null;
+}
+
+export async function getJobCountsByState() {
+  const db = await getDatabase();
   const states = ['pending', 'processing', 'completed', 'failed', 'dead'];
   const stats = {};
 
-  states.forEach(state => {
-    const stmt = db.prepare('SELECT COUNT(*) as count FROM jobs WHERE state = ?');
-    const result = stmt.get(state);
-    stats[state] = result.count;
-  });
+  for (const state of states) {
+    const res = await db.get('SELECT COUNT(*) as count FROM jobs WHERE state = ?', state);
+    stats[state] = res.count;
+  }
 
-  const dlqStmt = db.prepare('SELECT COUNT(*) as count FROM dlq');
-  stats.dlq = dlqStmt.get().count;
+  const dlqRes = await db.get('SELECT COUNT(*) as count FROM dlq');
+  stats.dlq = dlqRes.count;
+
+  stats.active_workers = await getActiveWorkersCount();
 
   return stats;
+}
+
+
+export async function resetJobAttempts(jobId) {
+  const db = await getDatabase();
+  return db.run(
+    `
+    UPDATE jobs
+    SET attempts = 0, error_message = NULL, updated_at = ?
+    WHERE id = ?
+    `,
+    new Date().toISOString(),
+    jobId
+  );
 }

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { getConfigValue, setConfigValue, getAllConfigValues } from '../core/config.js';
 import { table } from 'table';
 
-export function configCommand(action, options) {
+export async function configCommand(action, options) {
   if (action === 'set') {
     const { key, value } = options;
 
@@ -11,23 +11,28 @@ export function configCommand(action, options) {
       process.exit(1);
     }
 
-    setConfigValue(key, value);
+    await setConfigValue(key, value); 
+
     console.log(chalk.green('✓ Configuration updated'));
     console.log(`  ${chalk.cyan(key)} = ${chalk.yellow(value)}`);
+
   } else if (action === 'get') {
     const key = options.key;
 
     if (key) {
-      const value = getConfigValue(key);
+      const value = await getConfigValue(key);
+
       if (value === null) {
         console.log(chalk.yellow(`Config key not found: ${key}`));
         return;
       }
-      console.log(`${chalk.cyan(key)} = ${chalk.yellow(value)}`);
-    } else {
-      const configs = getAllConfigValues();
 
-      if (configs.length === 0) {
+      console.log(`${chalk.cyan(key)} = ${chalk.yellow(value)}`);
+
+    } else {
+      const configs = await getAllConfigValues(); 
+
+      if (!configs || configs.length === 0) {
         console.log(chalk.yellow('No configuration found'));
         return;
       }
@@ -40,7 +45,7 @@ export function configCommand(action, options) {
         ]),
       ];
 
-      console.log(chalk.bold.cyan('\\n⚙️  Configuration\\n'));
+      console.log(chalk.bold.cyan('\n  Configuration\n'));
       console.log(table(data));
     }
   }

@@ -6,12 +6,10 @@ import fs from 'fs';
   export function acquireLock(jobId) {
     const lockPath = path.join(locksDir, `job_${jobId}.lock`);
   
-    // Ensure locks directory exists
     if (!fs.existsSync(locksDir)) {
       fs.mkdirSync(locksDir, { recursive: true });
     }
   
-    // Try to create lock file (fails if exists)
     try {
       fs.writeFileSync(lockPath, JSON.stringify({
         jobId,
@@ -20,7 +18,6 @@ import fs from 'fs';
       }), { flag: 'wx' });
       return true;
     } catch (error) {
-      // Lock already exists
       return false;
     }
   }
