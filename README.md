@@ -8,7 +8,7 @@ The system ensures **persistent state**, safe concurrent processing, and clean o
 
 ### 🎥 Demo Video
 
-[![Watch the video](https://youtu.be/mkT0TZ0RSiw/0.jpg)](https://youtu.be/mkT0TZ0RSiw)
+[Watch the QueueCTL Demo Video on YouTube](https://www.youtube.com/watch?v=mkT0TZ0RSiw)
 
 ---
 
