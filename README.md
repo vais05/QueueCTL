@@ -8,7 +8,7 @@ The system ensures **persistent state**, safe concurrent processing, and clean o
 
 ### 🎥 Demo Video
 
-[![Watch the video](https://img.youtube.com/vi/GOI7TQkTalw/0.jpg)](https://youtu.be/GOI7TQkTalw)
+[![Watch the video](https://youtu.be/mkT0TZ0RSiw/0.jpg)](https://youtu.be/mkT0TZ0RSiw)
 
 ---
 
