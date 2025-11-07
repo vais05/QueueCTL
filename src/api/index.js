@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import jobsRouter from './jobs.js';
 import dlqRouter from './dlq.js';
-import { getJobStatus } from '../core/queue.js'; // If using ES modules
-import { initializeDatabase } from '../core/db.js'; // or require
+import { getJobStatus } from '../core/queue.js'; 
+import { initializeDatabase } from '../core/db.js'; 
 await initializeDatabase();
 
 
@@ -19,7 +19,7 @@ app.get('/api/status', async (req, res) => {
       const status = await getJobStatus();
       res.json(status);
     } catch (err) {
-      console.error("Error in /api/status:", err); // <--- Add this line!
+      console.error("Error in /api/status:", err);
       res.status(500).json({ error: 'Unable to retrieve status' });
     }
 });
