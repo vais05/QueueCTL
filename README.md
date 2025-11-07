@@ -280,6 +280,9 @@ node src/index.js dlq list
 node src/index.js config set max_retries 5
 ```
 
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/42698a15-a821-45ee-9ff8-2eb4d8f84dfb" />
+
+<img width="530" height="246" alt="Image" src="https://github.com/user-attachments/assets/2758c154-d796-47e9-b387-4094008f0f72" />
 ### Update Backoff Base
 
 ```
